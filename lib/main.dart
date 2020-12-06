@@ -9,7 +9,7 @@ Box box;
 
 void main() async {
   await Hive.initFlutter();
-  // Hive.registerAdapter(adapter);
+  Hive.registerAdapter(DishAdapt());
   box = await Hive.openBox('testBox');
   runApp(MyApp());
 }
@@ -48,20 +48,28 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Dish> dishes = List();
 
 
-  void _newDish() {
+  void _clearDishes() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('New dish'),
+          title: Text('Are sure you want to clear dishes?'),
           actions: [
             FlatButton(
-              onPressed: () {
-                box.add(Dish(name: "Eggs", image: "", served: false));
+              onPressed: () async {
+                await box.clear();
+                for(Dish dish in dishes) {
+                  dish.served = false;
+                  box.add(dish);
+                }
                 setState(() {});
                 Navigator.of(context).pop();
               },
-              child: Text('OK')
+              child: Text('Yes')
+            ),
+            FlatButton(
+              onPressed: () { Navigator.of(context).pop(); },
+              child: Text('Cancel')
             )
           ]
         );
@@ -72,20 +80,61 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    print('building');
+
+    TextEditingController nameCtrl = TextEditingController();
+    final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
+    double width = MediaQuery.of(context).size.width;
     print('box: ${box.length}');
     dishes = List<Dish>.from(box.values);
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text(widget.title),
         actions : [
           IconButton(
-            icon: Icon(Icons.clear),
+            icon: Icon(Icons.add),
             onPressed: () {
-              box.clear();
-
-              print("Box cleaned");
-              setState(() {});
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('New dish'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nameCtrl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            labelText: 'Name'
+                          )
+                        )
+                      ]
+                    ),
+                    actions: [
+                      FlatButton(
+                        onPressed: () {
+                          if (nameCtrl.text.trim().length > 0) {
+                            box.add(Dish(name: nameCtrl.text.trim(), image: "", served: false));
+                            setState(() {});
+                            Navigator.of(context).pop();
+                          } else {
+                            _scaffoldKey.currentState.showSnackBar(SnackBar(
+                              content: Text('Please enter the name of the dish')
+                            ));
+                          }
+                        },
+                        child: Text('Create')
+                      ),
+                      FlatButton(
+                        onPressed: () { Navigator.of(context).pop(); },
+                        child: Text('Cancel')
+                      )
+                    ]
+                  );
+                }
+              );
             }
           )
         ]
@@ -94,16 +143,39 @@ class _MyHomePageState extends State<MyHomePage> {
       ? ListView.builder(
         itemCount: dishes.length,
         itemBuilder: (context, index) {
-          return Text(dishes[index].name);
+          return Card(
+            elevation: 4,
+            // color: Colors.grey[350],
+            semanticContainer: true,
+            margin: EdgeInsets.only(top: index == 0 ? width*0.1 : 0, bottom: width*0.1, left: width*0.05, right: width*0.05),
+            clipBehavior: Clip.antiAliasWithSaveLayer,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5.0, vertical: width/16),
+                  child: Text(dishes[index].name)
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  color: Colors.red[900],
+                  onPressed: () {
+                    print('Deleting');
+                  }
+                )
+              ]
+            )
+          );
         }
       )
       : Center(
         child: Text('No saved dishes')
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _newDish,
+        onPressed: _clearDishes,
         tooltip: 'Nuevo platillo',
-        child: Icon(Icons.add)
+        child: Icon(Icons.replay_outlined)
       )
     );
   }
