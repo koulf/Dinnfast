@@ -10,8 +10,10 @@ class Dish {
   final String image;
   @HiveField(2)
   bool served;
+  @HiveField(3)
+  int color;
 
-  Dish({this.name, this.image, this.served});
+  Dish({this.name, this.image, this.served, this.color});
 }
 
 class DishAdapt extends TypeAdapter<Dish> {
@@ -27,20 +29,23 @@ class DishAdapt extends TypeAdapter<Dish> {
     return Dish(
       name: fields[0] as String,
       image: fields[1] as String,
-      served: fields[2] as bool
+      served: fields[2] as bool,
+      color: fields[3] as int
     );
   }
 
   @override
   void write(BinaryWriter writer, Dish obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
       ..write(obj.image)
       ..writeByte(2)
-      ..write(obj.served);
+      ..write(obj.served)
+      ..writeByte(3)
+      ..write(obj.color);
   }
 
   @override
